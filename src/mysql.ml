@@ -35,7 +35,7 @@ type dbd        (* database connection handle *)
 type result     (* handle to access result from query *)
 
 
-(* Do not change any type definition that is used by external functions 
+(* Do not change any type definition that is used by external functions
    without changing the C source code accordingly! *)
 
 (* Error codes *)
@@ -243,7 +243,7 @@ let error_of_int code = match code with
 | _ -> Unknown_error
 
 
-(* Status of MySQL database after an operation. Especially indicates empty 
+(* Status of MySQL database after an operation. Especially indicates empty
    result sets *)
 type status =
 | StatusOK
@@ -302,7 +302,7 @@ type field = { name : string; (* Name of the field *)
                max_length : int; (* Maximum width of field for the result set *)
                flags : int; (* Flags set *)
                decimals : int (* Number of decimals for numeric fields *)
-             } 
+             }
 
 
 
@@ -359,7 +359,7 @@ external errmsg     : dbd -> string option                  = "db_errmsg"
 external escape     : string -> string                      = "db_escape"
 external real_escape: dbd -> string -> string               = "db_real_escape"
 external set_charset: dbd -> string -> unit                 = "db_set_charset"
-external fetch      : result -> string option array option  = "db_fetch" 
+external fetch      : result -> string option array option  = "db_fetch"
 external to_row     : result -> int64 -> unit                 = "db_to_row"
 external size       : result -> int64                         = "db_size"
 external affected    : dbd -> int64                           = "db_affected"
@@ -382,12 +382,12 @@ let status dbd =
 
 let errno dbd = error_of_int (real_status dbd)
 
-(* [sub start len str] returns integer obtained from substring of length 
+(* [sub start len str] returns integer obtained from substring of length
    [len] from [str] *)
 
 let sub start len str = int_of_string (String.sub str ~pos:start ~len)
 
-(* xxx2ml parses a string returned from a MySQL field typed xxx and turns it into a 
+(* xxx2ml parses a string returned from a MySQL field typed xxx and turns it into a
    corresponding OCaml value.
 
    MySQL uses the following representations for date/time values
@@ -398,7 +398,7 @@ let sub start len str = int_of_string (String.sub str ~pos:start ~len)
    YEAR         yyyy'
    TIMESTAMP    YYYYMMDDHHMMSS'
 *)
- 
+
 
 let int2ml   str        = int_of_string str
 let decimal2ml   str    = str
@@ -421,9 +421,9 @@ let set2ml str =
     | ' ' | '\t' | '\n' | '\r' | ',' -> wsp acc (i + 1)
     | _ -> loop acc i (i+1)
   and loop acc p_start i =
-    if i = String.length str then (String.sub str p_start (String.length str - p_start)) :: acc else
+    if i = String.length str then (String.sub str ~pos:p_start ~len:(String.length str - p_start)) :: acc else
     match str.[i] with
-    | ' ' | '\t' | '\n' | '\r' | ',' -> wsp (String.sub str p_start (i - p_start) :: acc) (i+1)
+    | ' ' | '\t' | '\n' | '\r' | ',' -> wsp (String.sub str ~pos:p_start ~len:(i - p_start) :: acc) (i+1)
     | _ -> loop acc p_start (i+1)
   in
   List.rev (wsp [] 0)
@@ -432,7 +432,7 @@ let datetime2ml str =
     assert (String.length str = 19);
 
     let year    = sub 0  4 str   in
-    let month   = sub 5  2 str   in 
+    let month   = sub 5  2 str   in
     let day     = sub 8  2 str   in
     let hour    = sub 11 2 str   in
     let minute  = sub 14 2 str   in
@@ -442,7 +442,7 @@ let datetime2ml str =
 let date2ml str =
     assert (String.length str = 10);
     let year    = sub 0  4 str   in
-    let month   = sub 5  2 str   in 
+    let month   = sub 5  2 str   in
     let day     = sub 8  2 str   in
         (year,month,day)
 
@@ -461,7 +461,7 @@ let year2ml str =
 let timestamp2ml str =
     assert (String.length str = 14);
     let year    = sub 0  4 str   in
-    let month   = sub 4  2 str   in 
+    let month   = sub 4  2 str   in
     let day     = sub 6  2 str   in
     let hour    = sub 8  2 str   in
     let minute  = sub 10 2 str   in
@@ -472,16 +472,16 @@ let timestamp2ml str =
 (* [opt f v] applies [f] to optional value [v]. Use this to fetch
    data of known type from database fields which might be NULL:
    [opt int2ml str] *)
-let opt f arg = match arg with 
+let opt f arg = match arg with
     | None      -> None
     | Some x    -> Some (f x)
 
-(* [not_null f v] applies [f] to [Some v]. Use this to fetch data of known 
-   type from database fields which never can be NULL: [not_null int2ml str] 
+(* [not_null f v] applies [f] to [Some v]. Use this to fetch data of known
+   type from database fields which never can be NULL: [not_null int2ml str]
 *)
 let not_null f arg = match arg with
     | None      -> fail "not_null was applied to None"
-    | Some x    -> f x 
+    | Some x    -> f x
 
 
 let names result =
@@ -497,8 +497,8 @@ let types result =
     | None -> (fail "Unknown type in field"))
 
 (* [column result] returns a function [col] which fetches columns from
-   results by column name.  [col] has type string -> 'a array -> 'b. 
-   Where the first argument is the name of the column. 
+   results by column name.  [col] has type string -> 'a array -> 'b.
+   Where the first argument is the name of the column.
 
 
         let r   = exec dbd "select * from table"  in
@@ -506,7 +506,7 @@ let types result =
         let rec loop = function
             None   -> []
             Some a -> not_null int2ml (col "label" a) :: loop (fetch r)
-        in 
+        in
             loop (fetch r)
 
 *)
@@ -517,7 +517,7 @@ let column result =
         match Array.length names with
         | 0 -> StrMap.empty
         | n -> let rec loop i map =
-                 if   i = n 
+                 if   i = n
                  then map
                  else loop (i+1) (StrMap.add ~key:names.(i) ~data:i map)
                in
@@ -528,7 +528,7 @@ let column result =
      in
      col
 
-(* ml2xxx encodes OCaml values into strings that match the MysQL syntax of 
+(* ml2xxx encodes OCaml values into strings that match the MysQL syntax of
    the corresponding type *)
 
 let ml2str str  = "'" ^ escape str ^ "'"
@@ -539,7 +539,6 @@ let ml2int x    = string_of_int x
 let ml2decimal x    = x
 let ml322int x  = Int32.to_string x
 let ml642int x  = Int64.to_string x
-let mlnative2int x = Nativeint.to_string x
 let ml2float x  = string_of_float x
 let ml2enum x   = escape x
 let ml2renum x  = real_escape x
@@ -580,7 +579,7 @@ let ml2timestamp (year,month,day,hour,min,sec) =
 (* [values vs] creates from a list of values in MySQL format
    a vector (x,y,z,..) for the MySQL values construct *)
 
-let values vs = 
+let values vs =
     let rec loop arg = match arg with
         | []        -> ""
         | [x]       -> x
@@ -610,7 +609,7 @@ let iter_cols res ~key ~f =
 
 let map res ~f =
   if size res > Int64.zero then
-    let rec loop lst = 
+    let rec loop lst =
       match fetch res with
       | Some row -> loop (f row :: lst)
       | None -> lst

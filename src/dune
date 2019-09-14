@@ -1,0 +1,4 @@
+(library
+  (name mysql)
+  (modules mysql)
+  (c_names mysql_stubs))
